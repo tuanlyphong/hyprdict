@@ -1,0 +1,23 @@
+* {
+    font: "JetBrainsMono Nerd Font 13";
+}
+
+window {
+    width:        480px;
+    padding:      0px;
+    border-radius: 12px;
+}
+
+textbox {
+    padding:      16px 18px;
+    line-spacing: 7px;
+    wrap:         true;
+    width:        444px;
+}
+
+inputbar       { enabled: false; }
+listview       { enabled: false; }
+sidebar        { enabled: false; }
+prompt         { enabled: false; }
+entry          { enabled: false; }
+case-indicator { enabled: false; }
