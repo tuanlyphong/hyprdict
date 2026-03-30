@@ -31,7 +31,15 @@ try_trigger() {
   fi
 
   local len=${#word}
-  [ "$len" -lt 2 ] && return
+
+  if printf '%s' "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]'; then
+    # Japanese → allow single char
+    [ "$len" -lt 1 ] && return
+  else
+    # English → require at least 2 chars
+    [ "$len" -lt 2 ] && return
+  fi
+
   [ "$len" -gt 60 ] && return
 
   local prev
