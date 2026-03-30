@@ -1,9 +1,7 @@
-```md
 ![AUR version](https://img.shields.io/aur/version/hyprdict)
 ![AUR votes](https://img.shields.io/aur/votes/hyprdict)
 ![AUR popularity](https://img.shields.io/aur/popularity/hyprdict)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-```
 
 ---
 
