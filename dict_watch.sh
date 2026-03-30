@@ -1,8 +1,4 @@
 #!/bin/bash
-# dict_watch.sh — auto-triggers dict_popup on mouse selection
-#
-# Add to hyprland.conf:
-#   exec-once = ~/.config/hypr/scripts/dict_watch.sh
 
 POPUP_SCRIPT="hyprdict-popup"
 PREV_FILE="/tmp/dict_watch_prev"
@@ -11,32 +7,34 @@ PENDING_FILE="/tmp/dict_watch_pending"
 cleanup() { kill 0; }
 trap cleanup EXIT
 
-# ── Shared filter + trigger ───────────────────────────────────────────────────
+# ── Normalize text (CRITICAL) ────────────────────────────────────────────────
+clean_text() {
+  printf '%s' "$1" |
+    iconv -f UTF-8 -t UTF-8 -c 2>/dev/null |
+    tr -d '\0\r' |
+    sed 's/[[:space:]]\+/ /g' |
+    sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+# ── Detect Japanese safely ───────────────────────────────────────────────────
+is_japanese() {
+  printf '%s' "$1" | grep -q '[ぁ-んァ-ン一-龯]'
+}
+
+# ── Shared filter + trigger ──────────────────────────────────────────────────
 try_trigger() {
   local raw="$1"
-
-  # Strip null bytes and control characters, trim whitespace
   local word
-  word=$(printf '%s' "$raw" | tr -d '\0' | tr -d '\r' |
-    tr -d '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  word=$(clean_text "$raw")
 
   [ -z "$word" ] && return
 
-  # Japanese: allow multi-char tokens (no space restriction)
-  if printf '%s' "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]'; then
-    : # pass through
-  else
-    # English: reject anything containing a space (phrases/sentences)
-    printf '%s' "$word" | grep -q ' ' && return
-  fi
-
   local len=${#word}
 
-  if printf '%s' "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]'; then
-    # Japanese → allow single char
+  if is_japanese "$word"; then
     [ "$len" -lt 1 ] && return
   else
-    # English → require at least 2 chars
+    [[ "$word" == *" "* ]] && return
     [ "$len" -lt 2 ] && return
   fi
 
@@ -50,17 +48,16 @@ try_trigger() {
   "$POPUP_SCRIPT" "$word" &
 }
 
-# ── Watcher 1: PRIMARY selection (browser, terminal, most apps) ───────────────
+# ── Watcher 1: PRIMARY selection ─────────────────────────────────────────────
 watch_primary() {
   wl-paste --primary --watch bash -c '
     PENDING_FILE="'"$PENDING_FILE"'"
 
-    # Sanitize null bytes before any processing
-    word=$(cat | tr -d '"'"'\0\r\n'"'"' | sed '"'"'s/^[[:space:]]*//;s/[[:space:]]*$//'"'"')
+    word=$(cat)
     [ -z "$word" ] && exit 0
 
     echo "$word" > "$PENDING_FILE"
-    sleep 0.4
+    sleep 0.35
 
     current=$(cat "$PENDING_FILE" 2>/dev/null)
     [ "$word" != "$current" ] && exit 0
@@ -71,22 +68,19 @@ watch_primary() {
   done
 }
 
-# ── Watcher 2: CLIPBOARD poll (Zathura writes here, not primary) ──────────────
+# ── Watcher 2: CLIPBOARD (Zathura fix) ───────────────────────────────────────
 watch_clipboard() {
   local prev_clip=""
-  while true; do
-    sleep 0.6
 
-    # tr -d '\0' strips null bytes that cause the warning spam
+  while true; do
+    sleep 0.5
+
     local clip
-    clip=$(wl-paste --no-newline 2>/dev/null | tr -d '\0\r' |
-      sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    clip=$(wl-paste --no-newline 2>/dev/null)
+    clip=$(clean_text "$clip")
 
     [ -z "$clip" ] && continue
     [ "$clip" = "$prev_clip" ] && continue
-
-    # Extra guard: skip if output looks binary (non-printable chars remain)
-    printf '%s' "$clip" | grep -qP '[^\x09\x0a\x20-\x7e\x80-\xff]' && continue
 
     prev_clip="$clip"
     try_trigger "$clip"
