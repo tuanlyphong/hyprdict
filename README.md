@@ -26,9 +26,7 @@
 
 >
 
-```
 /assets/demo.png
-```
 
 ---
 
