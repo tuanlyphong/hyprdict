@@ -17,10 +17,10 @@ clean_text() {
 }
 
 # ── Detect Japanese safely ───────────────────────────────────────────────────
-is_japanese() {
-  printf '%s' "$1" | grep -q '[ぁ-んァ-ン一-龯]'
-}
 
+is_japanese() {
+  printf '%s' "$1" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]'
+}
 # ── Shared filter + trigger ──────────────────────────────────────────────────
 try_trigger() {
   local raw="$1"
@@ -52,16 +52,12 @@ try_trigger() {
 watch_primary() {
   wl-paste --primary --watch bash -c '
     PENDING_FILE="'"$PENDING_FILE"'"
-
-    word=$(cat)
+    word=$(cat | tr -d '"'"'\0\r\n'"'"' | sed '"'"'s/^[[:space:]]*//;s/[[:space:]]*$//'"'"')
     [ -z "$word" ] && exit 0
-
     echo "$word" > "$PENDING_FILE"
     sleep 0.35
-
     current=$(cat "$PENDING_FILE" 2>/dev/null)
     [ "$word" != "$current" ] && exit 0
-
     printf "__PRIMARY__%s\n" "$word"
   ' | while IFS= read -r line; do
     [[ "$line" == __PRIMARY__* ]] && try_trigger "${line#__PRIMARY__}"
