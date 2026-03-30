@@ -1,1 +1,198 @@
-test
+```md
+![AUR version](https://img.shields.io/aur/version/hyprdict)
+![AUR votes](https://img.shields.io/aur/votes/hyprdict)
+![AUR popularity](https://img.shields.io/aur/popularity/hyprdict)
+![License](https://img.shields.io/badge/license-MIT-blue)
+```
+
+---
+
+# **hyprdict — Instant Dictionary Popup for Hyprland**
+
+> Select a word → get a definition popup. No extra steps.
+
+---
+
+## ✨ Features
+
+- ⚡ Instant popup on text selection (no hotkey needed)
+- 🌐 English support via `dictionaryapi.dev`
+- 🇯🇵 Japanese support via Jisho API
+- 🪶 Lightweight (bash + rofi + curl)
+- 🧠 Works with Zathura, browsers, terminals, etc.
+- 🔁 Toggle on/off anytime
+
+---
+
+## 📸 Preview
+
+>
+
+```
+/assets/demo.png
+```
+
+---
+
+## ⚙️ How It Works
+
+```
+Selection / Clipboard
+        ↓
+ dict_watch.sh (daemon)
+        ↓
+ dict_popup.sh
+        ↓
+   rofi popup
+```
+
+- Watches **PRIMARY selection** (mouse select)
+- Watches **clipboard** (for apps like Zathura)
+- Auto-detects language → fetches definition → shows popup
+
+---
+
+## 📦 Dependencies
+
+Install on Arch:
+
+```bash
+sudo pacman -S rofi-wayland wl-clipboard curl python libnotify
+```
+
+---
+
+## 🚀 Installation
+
+### AUR (recommended)
+
+```bash
+yay -S hyprdict
+```
+
+---
+
+### Manual
+
+```bash
+git clone https://aur.archlinux.org/hyprdict.git
+cd hyprdict
+makepkg -si
+```
+
+---
+
+## 🛠 Setup
+
+Add to your Hyprland config:
+
+```ini
+bind = SUPER, L, exec, ~/.config/hypr/scripts/dict_toggle.sh
+```
+
+or whatever keybinding you prefer.
+Reload:
+
+```bash
+hyprctl reload
+```
+
+---
+
+## 🎮 Usage
+
+| Action        | Result        |
+| ------------- | ------------- |
+| `SUPER + L`   | Toggle on/off |
+| Select word   | Popup appears |
+| Copy text     | Popup appears |
+| `Esc` / click | Close popup   |
+
+---
+
+## 📁 File Structure
+
+```
+~/.config/hypr/scripts/
+├── dict_toggle.sh
+├── dict_watch.sh
+└── dict_popup.sh
+
+~/.config/rofi/
+└── dict.rasi
+```
+
+---
+
+## 🎨 Customization
+
+Edit:
+
+```
+~/.config/rofi/dict.rasi
+```
+
+Example:
+
+```css
+* {
+  font: "JetBrainsMono Nerd Font 13";
+}
+
+window {
+  width: 480px;
+}
+```
+
+---
+
+## 🐞 Troubleshooting
+
+**No popup**
+
+```bash
+wl-paste --primary
+```
+
+If empty → selection not working.
+
+---
+
+**rofi not showing**
+
+- Make sure you installed `rofi-wayland`, not `rofi`
+
+---
+
+**Japanese not working**
+
+```bash
+curl "https://jisho.org/api/v1/search/words?keyword=猫"
+```
+
+---
+
+## 🧹 Uninstall
+
+```bash
+rm ~/.config/hypr/scripts/dict_*.sh
+rm ~/.config/rofi/dict.rasi
+```
+
+Remove from `hyprland.conf`:
+
+```ini
+bind = SUPER, L, exec, ~/.config/hypr/scripts/dict_toggle.sh
+```
+
+## 💡 Notes
+
+- Designed for **Hyprland (Wayland)**
+- Not a plugin — uses clipboard monitoring
+- Works best with keyboard-driven workflows
+
+---
+
+## 📄 License
+
+## MIT
