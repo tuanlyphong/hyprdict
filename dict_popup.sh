@@ -17,7 +17,7 @@ sleep 0.05
 # MousePrimary mapped to cancel so clicking anywhere on the popup closes it.
 show_rofi() {
   rofi \
-    -theme ~/.config/rofi/dict.rasi \
+    -theme /usr/share/hyprdict/dict.rasi \
     -e "$1" \
     -kb-cancel "Escape,MousePrimary" \
     -kb-accept-entry ""

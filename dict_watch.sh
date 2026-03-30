@@ -4,7 +4,7 @@
 # Add to hyprland.conf:
 #   exec-once = ~/.config/hypr/scripts/dict_watch.sh
 
-POPUP_SCRIPT="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dict_popup.sh"
+POPUP_SCRIPT="hyprdict-popup"
 PREV_FILE="/tmp/dict_watch_prev"
 PENDING_FILE="/tmp/dict_watch_pending"
 
@@ -39,7 +39,7 @@ try_trigger() {
   [ "$word" = "$prev" ] && return
 
   echo "$word" >"$PREV_FILE"
-  bash "$POPUP_SCRIPT" "$word" &
+  "$POPUP_SCRIPT" "$word" &
 }
 
 # ── Watcher 1: PRIMARY selection (browser, terminal, most apps) ───────────────

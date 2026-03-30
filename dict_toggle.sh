@@ -2,7 +2,7 @@
 # dict_toggle.sh — Super+L: start watcher if off, kill if on
 # Uses a PID file to avoid pkill -f matching unrelated processes.
 
-WATCH_SCRIPT="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/dict_watch.sh"
+WATCH_SCRIPT="hyprdict-watch"
 PID_FILE="/tmp/dict_watch.pid"
 
 if [ -f "$PID_FILE" ]; then
@@ -23,6 +23,6 @@ fi
 
 # ── OFF → ON ───────────────────────────────────────────────────────────────
 # Start in its own process group (setsid) so we can kill the whole group
-setsid bash "$WATCH_SCRIPT" &
+setsid "$WATCH_SCRIPT" &
 echo $! >"$PID_FILE"
 notify-send -t 2000 "Dict" "Lookup on" 2>/dev/null || true

@@ -83,7 +83,7 @@ makepkg -si
 Add to your Hyprland config:
 
 ```ini
-bind = SUPER, L, exec, ~/.config/hypr/scripts/dict_toggle.sh
+bind = SUPER, L, exec, hyprdict-toggle
 ```
 
 or whatever keybinding you prefer.
