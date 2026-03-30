@@ -53,7 +53,7 @@ Selection / Clipboard
 Install on Arch:
 
 ```bash
-sudo pacman -S rofi-wayland wl-clipboard curl python libnotify
+sudo pacman -S rofi wl-clipboard curl python libnotify
 ```
 
 ---
@@ -87,6 +87,7 @@ bind = SUPER, L, exec, ~/.config/hypr/scripts/dict_toggle.sh
 ```
 
 or whatever keybinding you prefer.
+
 Reload:
 
 ```bash
