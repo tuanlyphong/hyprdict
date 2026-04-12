@@ -13,11 +13,9 @@ fi
 pkill -f "rofi.*dict.rasi" 2>/dev/null
 sleep 0.05
 
-# ── Helper: show with rofi -e (textbox mode = proper wrapping, no input bar)
-# MousePrimary mapped to cancel so clicking anywhere on the popup closes it.
 show_rofi() {
   rofi \
-    -theme /usr/share/hyprdict/dict.rasi \
+    -theme ~/.config/rofi/dict.rasi \
     -e "$1" \
     -kb-cancel "Escape,MousePrimary" \
     -kb-accept-entry ""
@@ -28,36 +26,49 @@ is_jp=$(echo "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]' && echo 1 ||
 
 if [ "$is_jp" -eq 1 ]; then
   # ===========================================================================
-  # 🇯🇵 JAPANESE — Jisho JSON API
+  # 🇯🇵 JAPANESE — Jotoba API (jotoba.de, open source, no regional blocks)
   # ===========================================================================
-  encoded=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$word")
+  json=$(curl -sf \
+    -A "Mozilla/5.0" \
+    -X POST "https://jotoba.de/api/search/words" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\": \"$word\", \"language\": \"English\", \"no_english\": false}")
 
-  json=$(curl -sf -A "Mozilla/5.0" \
-    "https://jisho.org/api/v1/search/words?keyword=${encoded}")
-
-  [ -z "$json" ] && show_rofi "Error: could not reach Jisho" && exit 1
+  [ -z "$json" ] && show_rofi "Error: could not reach Jotoba" && exit 1
 
   output=$(echo "$json" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-results = data.get('data', [])
-if not results:
+words = data.get('words', [])
+if not words:
     print('No results')
     sys.exit(0)
-r = results[0]
-jp = r['japanese'][0]
-word = jp.get('word') or jp.get('reading', '')
-reading = jp.get('reading', '')
-senses = r.get('senses', [])
-lines = []
-for s in senses[:4]:
-    defs = '; '.join(s.get('english_definitions', []))
-    pos  = ', '.join(s.get('parts_of_speech', []))
-    lines.append(f'[{pos}] {defs}' if pos else defs)
-header = f'{word} [{reading}]' if (word and reading and word != reading) else (word or reading)
+
+w = words[0]
+
+# Reading / kanji
+reading = w.get('reading', {})
+kana    = reading.get('kana', '')
+kanji   = reading.get('kanji', '')
+header  = f'{kanji} [{kana}]' if kanji else kana
 print(header)
-for l in lines:
-    print(f'  • {l}')
+
+# Senses
+for sense in w.get('senses', [])[:4]:
+    glosses = '; '.join(sense.get('glosses', []))
+    pos_list = sense.get('pos', [])
+    # pos entries can be strings or dicts
+    pos_strs = []
+    for p in pos_list:
+        if isinstance(p, str):
+            pos_strs.append(p)
+        elif isinstance(p, dict):
+            pos_strs.append(next(iter(p.keys()), ''))
+    pos = ', '.join(pos_strs) if pos_strs else ''
+    if pos:
+        print(f'  • [{pos}] {glosses}')
+    else:
+        print(f'  • {glosses}')
 ")
   show_rofi "$output"
 
