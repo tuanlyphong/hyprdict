@@ -40,21 +40,17 @@ with urllib.request.urlopen(req, timeout=5) as r:
 
   [ -z "$json" ] && show_rofi "Error: could not reach Jotoba" && exit 1
 
-  output=$(
-    DICT_QUERY="$word" python3 <<'PYEOF'
+  output=$(DICT_QUERY="$word" python3 -c "
 import sys, json, os
 
 query = os.environ['DICT_QUERY']
-
-raw = sys.stdin.read()
-data = json.loads(raw)
+data = json.loads(sys.stdin.read())
 words = data.get('words', [])
 
 if not words:
     print('No results')
     sys.exit(0)
 
-# Prefer exact match on kanji or kana, else first result
 best = None
 for w in words:
     reading = w.get('reading', {})
@@ -65,9 +61,9 @@ if best is None:
     best = words[0]
 
 reading = best.get('reading', {})
-kana    = reading.get('kana', '')
-kanji   = reading.get('kanji', '')
-header  = f'{kanji} [{kana}]' if kanji else kana
+kana  = reading.get('kana', '')
+kanji = reading.get('kanji', '')
+header = f'{kanji} [{kana}]' if kanji else kana
 print(header)
 
 for sense in best.get('senses', [])[:4]:
@@ -82,9 +78,7 @@ for sense in best.get('senses', [])[:4]:
                 pos_strs.append(k if v in ('Normal', True) else f'{k} ({v})')
     pos = ', '.join(pos_strs) if pos_strs else ''
     print(f'  • [{pos}] {glosses}' if pos else f'  • {glosses}')
-PYEOF
-    <<<"$json"
-  )
+" <<<"$json")
 
   show_rofi "$output"
 
