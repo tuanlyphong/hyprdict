@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Accept word from watcher daemon as $1, else fall back to clipboard
 if [ -n "$1" ]; then
   word="$1"
 else
@@ -9,7 +8,6 @@ fi
 
 [ -z "$word" ] && exit 0
 
-# Kill any existing dict popup
 pkill -f "rofi.*dict.rasi" 2>/dev/null
 sleep 0.05
 
@@ -21,39 +19,42 @@ show_rofi() {
     -kb-accept-entry ""
 }
 
-# ── Detect Japanese ───────────────────────────────────────────────────────────
 is_jp=$(echo "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]' && echo 1 || echo 0)
 
 if [ "$is_jp" -eq 1 ]; then
   # ===========================================================================
   # 🇯🇵 JAPANESE — Jotoba API
   # ===========================================================================
-  # Escape the word for JSON safely via python
-  json_payload=$(python3 -c "
-import json, sys
-print(json.dumps({'query': sys.argv[1], 'language': 'English', 'no_english': False}))
-" "$word")
-
-  json=$(curl -sf \
-    -A "Mozilla/5.0" \
-    -X POST "https://jotoba.de/api/search/words" \
-    -H "Content-Type: application/json" \
-    -d "$json_payload")
+  json=$(DICT_QUERY="$word" python3 -c "
+import json, os, urllib.request
+q = os.environ['DICT_QUERY']
+payload = json.dumps({'query': q, 'language': 'English', 'no_english': False}).encode()
+req = urllib.request.Request(
+    'https://jotoba.de/api/search/words',
+    data=payload,
+    headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+)
+with urllib.request.urlopen(req, timeout=5) as r:
+    print(r.read().decode())
+")
 
   [ -z "$json" ] && show_rofi "Error: could not reach Jotoba" && exit 1
 
-  output=$(echo "$json" | python3 -c "
-import sys, json
+  output=$(
+    DICT_QUERY="$word" python3 <<'PYEOF'
+import sys, json, os
 
-data = json.load(sys.stdin)
-query = sys.argv[1]
+query = os.environ['DICT_QUERY']
+
+raw = sys.stdin.read()
+data = json.loads(raw)
 words = data.get('words', [])
 
 if not words:
     print('No results')
     sys.exit(0)
 
-# Prefer exact match on kanji or kana == query, else fall back to first result
+# Prefer exact match on kanji or kana, else first result
 best = None
 for w in words:
     reading = w.get('reading', {})
@@ -77,10 +78,13 @@ for sense in best.get('senses', [])[:4]:
         if isinstance(p, str):
             pos_strs.append(p)
         elif isinstance(p, dict):
-            pos_strs.append(next(iter(p.keys()), ''))
+            for k, v in p.items():
+                pos_strs.append(k if v in ('Normal', True) else f'{k} ({v})')
     pos = ', '.join(pos_strs) if pos_strs else ''
     print(f'  • [{pos}] {glosses}' if pos else f'  • {glosses}')
-" "$word")
+PYEOF
+    <<<"$json"
+  )
 
   show_rofi "$output"
 
