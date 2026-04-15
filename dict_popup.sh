@@ -26,38 +26,52 @@ is_jp=$(echo "$word" | grep -qP '[\p{Hiragana}\p{Katakana}\p{Han}]' && echo 1 ||
 
 if [ "$is_jp" -eq 1 ]; then
   # ===========================================================================
-  # 🇯🇵 JAPANESE — Jotoba API (jotoba.de, open source, no regional blocks)
+  # 🇯🇵 JAPANESE — Jotoba API
   # ===========================================================================
+  # Escape the word for JSON safely via python
+  json_payload=$(python3 -c "
+import json, sys
+print(json.dumps({'query': sys.argv[1], 'language': 'English', 'no_english': False}))
+" "$word")
+
   json=$(curl -sf \
     -A "Mozilla/5.0" \
     -X POST "https://jotoba.de/api/search/words" \
     -H "Content-Type: application/json" \
-    -d "{\"query\": \"$word\", \"language\": \"English\", \"no_english\": false}")
+    -d "$json_payload")
 
   [ -z "$json" ] && show_rofi "Error: could not reach Jotoba" && exit 1
 
   output=$(echo "$json" | python3 -c "
 import sys, json
+
 data = json.load(sys.stdin)
+query = sys.argv[1]
 words = data.get('words', [])
+
 if not words:
     print('No results')
     sys.exit(0)
 
-w = words[0]
+# Prefer exact match on kanji or kana == query, else fall back to first result
+best = None
+for w in words:
+    reading = w.get('reading', {})
+    if reading.get('kanji') == query or reading.get('kana') == query:
+        best = w
+        break
+if best is None:
+    best = words[0]
 
-# Reading / kanji
-reading = w.get('reading', {})
+reading = best.get('reading', {})
 kana    = reading.get('kana', '')
 kanji   = reading.get('kanji', '')
 header  = f'{kanji} [{kana}]' if kanji else kana
 print(header)
 
-# Senses
-for sense in w.get('senses', [])[:4]:
-    glosses = '; '.join(sense.get('glosses', []))
+for sense in best.get('senses', [])[:4]:
+    glosses  = '; '.join(sense.get('glosses', []))
     pos_list = sense.get('pos', [])
-    # pos entries can be strings or dicts
     pos_strs = []
     for p in pos_list:
         if isinstance(p, str):
@@ -65,11 +79,9 @@ for sense in w.get('senses', [])[:4]:
         elif isinstance(p, dict):
             pos_strs.append(next(iter(p.keys()), ''))
     pos = ', '.join(pos_strs) if pos_strs else ''
-    if pos:
-        print(f'  • [{pos}] {glosses}')
-    else:
-        print(f'  • {glosses}')
-")
+    print(f'  • [{pos}] {glosses}' if pos else f'  • {glosses}')
+" "$word")
+
   show_rofi "$output"
 
 else
