@@ -55,7 +55,7 @@ watch_primary() {
     word=$(cat | tr -d '"'"'\0\r\n'"'"' | sed '"'"'s/^[[:space:]]*//;s/[[:space:]]*$//'"'"')
     [ -z "$word" ] && exit 0
     echo "$word" > "$PENDING_FILE"
-    sleep 0.35
+    sleep 0.6
     current=$(cat "$PENDING_FILE" 2>/dev/null)
     [ "$word" != "$current" ] && exit 0
     printf "__PRIMARY__%s\n" "$word"
